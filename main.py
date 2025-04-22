@@ -6,16 +6,20 @@ import requests
 import websocket
 from keep_alive import keep_alive
 
-status = "online"  # online/dnd/idle
+# قراءة المتغيرات من environment variables
+usertoken = os.getenv("TOKEN")
+guild_id = os.getenv("GUILD_ID")
+channel_id = os.getenv("CHANNEL_ID")
+status = os.getenv("STATUS", "online").lower()  # online/dnd/idle
+SELF_MUTE = os.getenv("SELF_MUTE", "true").lower() == "true"
+SELF_DEAF = os.getenv("SELF_DEAF", "false").lower() == "true"
 
-guild_id = "923212171960262687"
-channel_id = "1094744199712231596"
-SELF_MUTE = True
-SELF_DEAF = False
-
-usertoken = os.getenv("TOKEN")  # خزن التوكن هنا من Secrets
 if not usertoken:
     print("[ERROR] Please add a token inside Secrets.")
+    sys.exit()
+
+if not guild_id or not channel_id:
+    print("[ERROR] GUILD_ID or CHANNEL_ID is missing.")
     sys.exit()
 
 headers = {"Authorization": usertoken, "Content-Type": "application/json"}
@@ -25,7 +29,7 @@ if validate.status_code != 200:
     print("[ERROR] Your token might be invalid. Please check it again.")
     sys.exit()
 
-userinfo = requests.get('https://canary.discordapp.com/api/v9/users/@me', headers=headers).json()
+userinfo = validate.json()
 username = userinfo["username"]
 discriminator = userinfo["discriminator"]
 userid = userinfo["id"]
@@ -48,9 +52,7 @@ def joiner(token, status):
                 "status": status,
                 "afk": False
             }
-        },
-        "s": None,
-        "t": None
+        }
     }
 
     vc = {
@@ -69,7 +71,7 @@ def joiner(token, status):
     ws.send(json.dumps({"op": 1, "d": None}))
 
 def run_joiner():
-    os.system("clear")
+    os.system("clear" if os.name == "posix" else "cls")
     print(f"Logged in as {username}#{discriminator} ({userid}).")
     while True:
         joiner(usertoken, status)
